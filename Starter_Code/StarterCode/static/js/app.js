@@ -11,12 +11,20 @@ d3.json(url).then(function(data) {
     console.log(names);
 });
 
-// creating function connecting to the HTML element for when a user selects a subject from the list
-function optionChanged(subj_id) {
-    console.log(subj_id);
-    otuBarchart(subj_id)
-    };
-
+// adding in panel box function
+function panelBox(subj_id) {
+    d3.json(url).then(function (data) {
+        let sampleData = data;
+        let metadata = sampleData.metadata;
+        let identifier = metadata.filter(sample =>
+            sample.id.toString() === subj_id)[0];
+        let panel = d3.select('#sample-metadata');
+        panel.html('');
+        Object.entries(identifier).forEach(([key, value]) => {
+            panel.append('h6').text(`${key}: ${value}`);
+        })
+    })
+};   
 
 // creating the bar chart to connect when a new subject id is chosen
 function otuBarchart(subj_id) {
@@ -24,23 +32,28 @@ function otuBarchart(subj_id) {
     let list_of_samples = data.samples;
     let identifier = list_of_samples.filter(sample => sample.id === subj_id);
     let filters = identifier[0];
-    let otuID = filters.sample_values.slice(0,10).reverse();
-    let otuVals = filters.otu_ids.slice(0,10).reverse();
+    let otuVals = filters.sample_values.slice(0,10).reverse();
+    let otuID = filters.otu_ids.slice(0,10).reverse();
     let otuLabels = filters.otu_labels.slice(0, 10).reverse();
-    data = 
+    h_trace = 
         {
             x: otuVals,
             y: otuID.map(object => 'OTU ' + object),
             name: otuLabels,
             type:'bar',
-            orientation: 'h'
+            orientation: 'h',
+            marker: {
+                color: "hotpink"
+            }
         };
     let barLayout = {
         title: `Top 10 OTUs for Subject ${subj_id}`,
         xaxis: { title: 'Sample Values' },
-        yaxis: { title: 'OTU ID' }
+        yaxis: { title: 'OTU ID' },
     };
-    Plotly.newPlot('bar', data, barLayout);
+    let h_data = [h_trace];
+    Plotly.newPlot('bar', h_data, barLayout);
+
     let bubbleTrace = {
         x: filters.otu_ids,
         y: filters.sample_values,
@@ -48,51 +61,36 @@ function otuBarchart(subj_id) {
         marker: {
             size: filters.sample_values,
             color: filters.otu_ids,
-            colorscale: 'Portland'
+            colorscale: 'Picnic'
         },
         text: filters.otu_labels,
     };
     let bubbleData = [bubbleTrace];
     let bubbleLayout = {
         title: `OTUs for Subject ${subj_id}`,
-        xaxis: { title: 'OTU ID' },
-        yaxis: { title: 'Sample Values' }
+        xaxis: { 
+            title: 'OTU ID', 
+            automargin: true,
+            autorange: true,
+        },
+        yaxis: {
+            title: 'Sample Values' , 
+            automargin:true,
+            autorange: true, 
+        }
     };
-    Plotly.newPlot('bubble', bubbleData, bubbleLayout);
+    Plotly.newPlot('bubble', bubbleData, bubbleLayout, {displayModeBar: true});
     })
 
 };
-function Plot(id) {
-    d3.json(url).then(function (data) {
-        let metadata = data.metadata;
-        let gaugeArray = metadata.filter(metaObj => metaObj.id == sample);
-        let gaugeResult = gaugeArray[0];
-        let wash = gaugeResult.wfreq;
 
-        let gauge_trace =  [
-            {
-                domain: { x: [0, 1], y: [0, 1] },
-                value: wash,
-                title: { text: "Belly Button Washing Frequency" },
-                type: "indicator",
-                mode: "gauge+number"
-            }
-        ];
-        let gauge_data = [gauge_trace];
-        let gauge_layout = {
-            width: 600, height: 500, margin: { t: 0, b: 0 } 
-        };
-        Plotly.newPlot('myDiv', gauge_data, gauge_layout)
-    })
+//Function to change stuff when subject id changes
+function optionChanged(subj_id) {
+    otuBarchart(subj_id);
+    panelBox(subj_id);
 };
 
-//Build new upon ID change
-function optionChanged(id) {
-    Plots(id);
-    panelInfo(id);
-};
-
-//Test Subject Dropdown and initial function
+//adding in initial for subject drop down and charts 
 function init() {
     let dropDown = d3.select('#selDataset');
     d3.json(url).then(function (data) {
@@ -101,9 +99,9 @@ function init() {
         Object.values(names).forEach(value => {
             dropDown.append('option').text(value);
         })
-        Panel(names[0]);
-        Plots(names[0]);
-        Plot(names[0])
+        panelBox(names[0]);
+        otuBarchart(names[0]);
+        otuBarchart(names[0])
     })
 };
 init();
